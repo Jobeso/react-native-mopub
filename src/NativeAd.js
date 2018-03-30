@@ -1,5 +1,6 @@
 import React from 'react'
 import { requireNativeComponent } from 'react-native'
+import PropTypes from 'prop-types'
 
 const TellAd = requireNativeComponent('NativeTellAd', NativeAd)
 
