@@ -1,9 +1,12 @@
-package com.testapp.nativeAds;
+package com.RNMoPub.nativeAds;
 
 import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewStub;
+import android.widget.RelativeLayout;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.ReactMethod;
@@ -19,7 +22,8 @@ import com.mopub.nativeads.NativeAd;
 import com.mopub.nativeads.NativeErrorCode;
 import com.mopub.nativeads.RequestParameters;
 import com.mopub.nativeads.ViewBinder;
-import com.testapp.R;
+import com.RNMoPub.LayoutMap;
+import com.RNMoPub.R;
 
 import java.util.EnumSet;
 import java.util.Map;
@@ -30,12 +34,11 @@ import java.util.Map;
 
 public class NativeAdViewManager extends SimpleViewManager<View> implements View.OnAttachStateChangeListener, MoPubNative.MoPubNativeNetworkListener, NativeAd.MoPubNativeEventListener
 {
-    public static final String REACT_CLASS = "NativeTellAd";
+    public static final String REACT_CLASS = "NativeAd";
     public static final String FAILURE_EVENT = "onFailure";
     public static final String SUCCESS_EVENT = "onSuccess";
     public static final String IMPRESSION_EVENT = "onImpression";
     public static final String CLICK_EVENT = "onClick";
-    public static final int LAYOUT = R.layout.native_ad;
 
     private ThemedReactContext themedReactContext;
     private RCTEventEmitter emitter;
@@ -43,6 +46,7 @@ public class NativeAdViewManager extends SimpleViewManager<View> implements View
     private MoPubNative mopubNative;
     private NativeAd nativeAdHelper;
     private View adView;
+    private int layout = -1;
 
     private String unitId;
 
@@ -56,8 +60,7 @@ public class NativeAdViewManager extends SimpleViewManager<View> implements View
     {
         themedReactContext = context;
         emitter = context.getJSModule(RCTEventEmitter.class);
-        adView = LayoutInflater.from(context).inflate(LAYOUT, null);
-
+        adView = LayoutInflater.from(context).inflate(R.layout.initial, null);
         return adView;
     }
 
@@ -92,14 +95,17 @@ public class NativeAdViewManager extends SimpleViewManager<View> implements View
      */
     private void RequestAdInternal()
     {
-        if(unitId == null){
+        if(unitId == null || layout < 0){
             return;
         }
         mopubNative = new MoPubNative(themedReactContext.getCurrentActivity(), unitId, this);
-        mopubNative.registerAdRenderer(new MoPubStaticNativeAdRenderer(new ViewBinder.Builder(LAYOUT)
-                            .titleId(R.id.ad_title)
-                            .textId(R.id.ad_body)
-                            .mainImageId(R.id.ad_image)
+        mopubNative.registerAdRenderer(new MoPubStaticNativeAdRenderer(new ViewBinder.Builder(layout)
+                            .titleId(R.id.native_title)
+                            .textId(R.id.native_text)
+                            .mainImageId(R.id.native_main_image)
+                            .iconImageId(R.id.native_icon_image)
+                            .privacyInformationIconImageId(R.id.native_privacy_information_icon_image)
+                            .callToActionId(R.id.native_cta)
                             .build()));
         /* For developers
             You can add extra informations like:
@@ -113,7 +119,9 @@ public class NativeAdViewManager extends SimpleViewManager<View> implements View
                 .desiredAssets(EnumSet.of(
                         RequestParameters.NativeAdAsset.TITLE,
                         RequestParameters.NativeAdAsset.TEXT,
-                        RequestParameters.NativeAdAsset.MAIN_IMAGE))
+                        RequestParameters.NativeAdAsset.MAIN_IMAGE,
+                        RequestParameters.NativeAdAsset.ICON_IMAGE,
+                        RequestParameters.NativeAdAsset.CALL_TO_ACTION_TEXT))
                 .build());
     }
 
@@ -125,6 +133,23 @@ public class NativeAdViewManager extends SimpleViewManager<View> implements View
     @ReactProp(name = "unitId")
     public void setUnitId(View view, @Nullable String unitId) {
         this.unitId = unitId;
+        RequestAdInternal();
+    }
+
+    /**
+     * Sets the property "layout"
+     * @param view The view component.
+     * @param layout The layout key.
+     */
+    @ReactProp(name = "layout")
+    public void setLayout(View view, @Nullable String layout) {
+        this.layout = LayoutMap.Get(layout);
+        if(this.layout >= 0){
+            ((RelativeLayout)adView).removeAllViews();
+            ((RelativeLayout)adView).addView(LayoutInflater.from(themedReactContext).inflate(this.layout, null));
+        }else {
+            // TODO log error or warning
+        }
         RequestAdInternal();
     }
 
